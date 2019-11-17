@@ -1,68 +1,96 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Amazing Unicorn Startup
 
-## Available Scripts
+In the base `master` branch, we have a mostly functional form. But, there are two problems.
 
-In the project directory, you can run:
+1. Using individual state hooks for ever field is getting a bit cumbersome. It would be cool if we had something closer to `this.setState`.
+2. There is no real form validation.
 
-### `npm start`
+We're going to solve each of these in two different chapters of this workshop.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+We've see that we can create our own custom hooks.
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+Could we create a hook that mostly works like `this.setState`.
 
-### `npm test`
+**Spoiler alert**: Yes, we can—and we're going to do it using `useReducer`.
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Creating the Hook
 
-### `npm run build`
+```js
+import { useReducer } from 'react';
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+const reducer = (previousState = {}, updatedState = {}) => {
+  return { ...previousState, ...updatedState };
+};
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+const useSetState = (initialState = {}) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+  const setState = updatedState => dispatch(updatedState);
 
-### `npm run eject`
+  return [state, setState];
+};
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+export default useSetState;
+```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+We could take it a step further by using a more standard action patter, but I'm not going to.
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Using It in the Application
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+We just make an object for the initial state of the form.
 
-## Learn More
+```js
+const initialState = {
+  userName: '',
+  email: '',
+  password: '',
+  passwordConfirmation: ''
+};
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+We can add a dymanic function for changing the state based on the field name.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```js
+const handleChange = event => {
+  setState({
+    [event.target.name]: event.target.value
+  });
+};
+```
 
-### Code Splitting
+And now, each input field can be refactored somewhere along the lines of this first one.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+```js
+<input
+  id="userName"
+  name="userName"
+  type="text"
+  value={state.userName}
+  required
+  onChange={handleChange}
+/>
+```
 
-### Analyzing the Bundle Size
+## Without a Reducer
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+You could also implement this without a reducer, but I prefer the previous patter.
 
-### Making a Progressive Web App
+```js
+import { useState, useCallback } from 'react';
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+const useSetState = initialState => {
+  const [state, set] = useState(initialState);
 
-### Advanced Configuration
+  const setState = useCallback(
+    updatedState => {
+      set(previousState => ({ ...previousState, ...updatedState }));
+    },
+    [set]
+  );
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+  return [state, setState];
+};
 
-### Deployment
+export default useSetState;
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+```
